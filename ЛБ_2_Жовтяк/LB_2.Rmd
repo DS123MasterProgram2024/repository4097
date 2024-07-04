@@ -1,0 +1,51 @@
+---
+title: "Лабораторна робота №2 Жовтяк"
+output: html_document
+date: "2024-07-04"
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dbplyr)
+library(dplyr)
+library(RSQLite)
+library(tidyr)
+
+# Завантаження даних mtcars
+data("mtcars")
+
+con <- dbConnect(RSQLite::SQLite(), dbname = "mtcars.db")
+
+# Експорт даних у таблицю бази даних з перезаписом існуючої таблиці
+dbWriteTable(con, "mtcars", mtcars, overwrite = TRUE)
+
+# Виконання запиту до бази даних для перевірки
+result <- dbGetQuery(con, "SELECT * FROM mtcars LIMIT 10")
+print(result)
+
+# Закриття з'єднання з базою даних
+dbDisconnect(con)
+
+# Додавання змінної з випадковими даними
+mtcars <- mtcars %>%
+  mutate(random_metric = rnorm(n(), mean = 50, sd = 10))
+
+# Вибір стовпців для аналізу
+selected_columns <- mtcars %>%
+  mutate(car_model = rownames(mtcars)) %>%
+  select(car_model, mpg, hp, random_metric)
+
+# Перетворення даних у довгий формат
+long_format <- selected_columns %>%
+  pivot_longer(cols = -car_model, names_to = "metric", values_to = "value")
+
+# Побудова графіку
+ggplot(long_format, aes(x = metric, y = value, color = car_model)) +
+  geom_point() +
+  geom_line(aes(group = car_model)) +
+  labs(title = "Аналіз різних метрик автомобілів",
+       x = "Метрика", y = "Значення",
+       color = "Модель автомобіля") +
+  theme_minimal()
+
